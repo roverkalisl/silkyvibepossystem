@@ -72,6 +72,13 @@ class OrderSerializer(serializers.ModelSerializer):
         products = Product.objects.select_for_update().filter(id__in=product_ids)
         products_by_id = {product.id: product for product in products}
 
+        # Set payment_status based on payment_method
+        payment_method = validated_data.get("payment_method", "")
+        if payment_method in [Order.PAYMENT_COD, Order.PAYMENT_BANK_DEPOSIT]:
+            validated_data["payment_status"] = Order.PAYMENT_STATUS_PENDING
+        else:
+            validated_data["payment_status"] = Order.PAYMENT_STATUS_VERIFIED
+
         order = Order.objects.create(**validated_data)
         total = 0
 

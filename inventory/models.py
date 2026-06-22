@@ -82,11 +82,34 @@ class Order(models.Model):
         (STATUS_CANCELLED, "Cancelled"),
     ]
 
+    PAYMENT_CASH = "cash"
+    PAYMENT_CARD = "card"
+    PAYMENT_BANK_DEPOSIT = "bank_deposit"
+    PAYMENT_COD = "cod"
+
+    PAYMENT_METHOD_CHOICES = [
+        (PAYMENT_CASH, "Cash"),
+        (PAYMENT_CARD, "Card"),
+        (PAYMENT_BANK_DEPOSIT, "Bank Deposit"),
+        (PAYMENT_COD, "Cash on Delivery"),
+    ]
+
+    PAYMENT_STATUS_PENDING = "pending"
+    PAYMENT_STATUS_VERIFIED = "verified"
+    PAYMENT_STATUS_FAILED = "failed"
+
+    PAYMENT_STATUS_CHOICES = [
+        (PAYMENT_STATUS_PENDING, "Pending"),
+        (PAYMENT_STATUS_VERIFIED, "Verified"),
+        (PAYMENT_STATUS_FAILED, "Failed"),
+    ]
+
     order_number = models.CharField(max_length=50, unique=True)
     customer_name = models.CharField(max_length=255, blank=True)
     customer_email = models.EmailField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
-    payment_method = models.CharField(max_length=255, blank=True)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default=PAYMENT_CASH)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default=PAYMENT_STATUS_VERIFIED)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

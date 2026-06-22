@@ -26,6 +26,15 @@ def apply_ten_percent_discount(modeladmin, request, queryset):
             product.save()
 
 
+@admin.action(description="Mark selected orders as payment verified")
+def verify_payment(modeladmin, request, queryset):
+    updated = queryset.filter(payment_status=Order.PAYMENT_STATUS_PENDING).update(
+        payment_status=Order.PAYMENT_STATUS_VERIFIED,
+        status=Order.STATUS_PAID,
+    )
+    modeladmin.message_user(request, f"Marked {updated} orders as payment verified.")
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
@@ -51,9 +60,10 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ("order_number", "status", "customer_name", "customer_email", "total_amount", "created_at")
-    list_filter = ("status", "created_at")
+    list_display = ("order_number", "status", "payment_method", "payment_status", "customer_name", "customer_email", "total_amount", "created_at")
+    list_filter = ("status", "payment_method", "payment_status", "created_at")
     search_fields = ("order_number", "customer_name", "customer_email")
+    actions = (verify_payment,)
     inlines = (OrderItemInline,)
 
 

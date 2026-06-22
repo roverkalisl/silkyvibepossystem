@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<h1>Shopping Cart</h1>
+
+<div style="margin-bottom: 20px;">
+  <a href="{% url 'product-list-page' %}" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Continue Shopping</a>
+</div>
+
+<table border="1" style="width: 100%; border-collapse: collapse;">
+  <thead>
+    <tr style="background: #f5f5f5;">
+      <th style="padding: 10px; text-align: left;">Product</th>
+      <th style="padding: 10px; text-align: center;">Price</th>
+      <th style="padding: 10px; text-align: center;">Qty</th>
+      <th style="padding: 10px; text-align: center;">Subtotal</th>
+      <th style="padding: 10px; text-align: center;">Action</th>
+    </tr>
+  </thead>
+  <tbody id="cart_body">
+  </tbody>
+</table>
+
+<div style="margin-top: 20px; padding: 20px; background: #f9f9f9; border-radius: 5px;">
+  <h3>Order Summary</h3>
+  <p><strong>Subtotal:</strong> Rs. <span id="subtotal">0.00</span></p>
+  <p><strong>Total:</strong> Rs. <span id="total" style="font-size: 20px; color: #28a745;"><strong>0.00</strong></span></p>
+</div>
+
+<div style="margin-top: 20px;">
+  <button id="checkout_btn" style="padding: 12px 40px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">
+    Proceed to Checkout
+  </button>
+</div>
+
+<script>
+// Load cart from localStorage
+let cart = JSON.parse(localStorage.getItem('shopping_cart')) || [];
+
+function renderCart() {
+  const tbody = document.getElementById('cart_body');
+  tbody.innerHTML = '';
+  let total = 0;
+  
+  if (cart.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #999;">Your cart is empty</td></tr>';
+    document.getElementById('checkout_btn').disabled = true;
+    return;
+  }
+  
+  cart.forEach((item, idx) => {
+    const subtotal = item.price * item.quantity;
+    total += subtotal;
+    
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding: 10px;">${item.name} <br/><small>(SKU: ${item.sku})</small></td>
+      <td style="padding: 10px; text-align: center;">Rs. ${item.price.toFixed(2)}</td>
+      <td style="padding: 10px; text-align: center;">
+        <input type="number" min="1" value="${item.quantity}" 
+               data-idx="${idx}" class="qty-input" 
+               style="width: 50px; padding: 5px;" />
+      </td>
+      <td style="padding: 10px; text-align: center;">Rs. ${subtotal.toFixed(2)}</td>
+      <td style="padding: 10px; text-align: center;">
+        <button data-idx="${idx}" class="remove-btn" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">Remove</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  
+  document.getElementById('subtotal').textContent = total.toFixed(2);
+  document.getElementById('total').textContent = total.toFixed(2);
+}
+
+// Update quantity
+document.addEventListener('change', (e) => {
+  if (e.target.classList.contains('qty-input')) {
+    const idx = parseInt(e.target.dataset.idx);
+    const newQty = parseInt(e.target.value) || 1;
+    if (newQty > 0) {
+      cart[idx].quantity = newQty;
+      localStorage.setItem('shopping_cart', JSON.stringify(cart));
+      renderCart();
+    }
+  }
+});
+
+// Remove item
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('remove-btn')) {
+    const idx = parseInt(e.target.dataset.idx);
+    cart.splice(idx, 1);
+    localStorage.setItem('shopping_cart', JSON.stringify(cart));
+    renderCart();
+  }
+});
+
+// Checkout
+document.getElementById('checkout_btn').addEventListener('click', () => {
+  if (cart.length === 0) {
+    alert('Your cart is empty');
+    return;
+  }
+  window.location.href = '{% url "checkout-page" %}';
+});
+
+renderCart();
+</script>
+
+{% endblock %}

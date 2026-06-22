@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<h1>Checkout</h1>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+  <!-- Left: Order Form -->
+  <div>
+    <h3>Shipping & Payment Information</h3>
+    <form id="checkout_form">
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px;">Full Name:</label>
+        <input type="text" id="customer_name" placeholder="John Doe" required 
+               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" />
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px;">Email:</label>
+        <input type="email" id="customer_email" placeholder="john@example.com" required 
+               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" />
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px;">Payment Method:</label>
+        <select id="payment_method" required 
+                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+          <option value="">-- Select Payment Method --</option>
+          <option value="cash">Cash on Delivery (COD)</option>
+          <option value="card">Credit/Debit Card</option>
+          <option value="bank_deposit">Bank Deposit</option>
+        </select>
+      </div>
+      
+      <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+        <p style="margin: 0; color: #666; font-size: 14px;" id="payment_info">
+          Select a payment method to see details
+        </p>
+      </div>
+      
+      <button type="submit" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">
+        Place Order
+      </button>
+    </form>
+    
+    <div id="message" style="margin-top: 20px; padding: 15px; border-radius: 5px; display: none;"></div>
+  </div>
+  
+  <!-- Right: Order Summary -->
+  <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; height: fit-content;">
+    <h3>Order Summary</h3>
+    <div id="order_summary" style="margin-bottom: 20px;"></div>
+    
+    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;" />
+    
+    <table style="width: 100%; font-size: 14px;">
+      <tr>
+        <td><strong>Subtotal:</strong></td>
+        <td style="text-align: right;">Rs. <span id="summary_subtotal">0.00</span></td>
+      </tr>
+      <tr style="font-size: 18px;">
+        <td><strong>Total:</strong></td>
+        <td style="text-align: right; color: #28a745;"><strong>Rs. <span id="summary_total">0.00</span></strong></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<script>
+// Get cart from localStorage
+let cart = JSON.parse(localStorage.getItem('shopping_cart')) || [];
+
+if (cart.length === 0) {
+  document.querySelector('form').innerHTML = '<p style="color: #e74c3c;">Your cart is empty. <a href="/pages/products/">Continue shopping</a></p>';
+}
+
+function renderOrderSummary() {
+  const summary = document.getElementById('order_summary');
+  let total = 0;
+  
+  let html = '';
+  cart.forEach(item => {
+    const subtotal = item.price * item.quantity;
+    total += subtotal;
+    html += `
+      <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+        <div>
+          <strong>${item.name}</strong><br/>
+          <small>Qty: ${item.quantity} × Rs. ${item.price.toFixed(2)}</small>
+        </div>
+        <div style="text-align: right;">Rs. ${subtotal.toFixed(2)}</div>
+      </div>
+    `;
+  });
+  
+  summary.innerHTML = html;
+  document.getElementById('summary_subtotal').textContent = total.toFixed(2);
+  document.getElementById('summary_total').textContent = total.toFixed(2);
+}
+
+// Payment method info
+document.getElementById('payment_method').addEventListener('change', (e) => {
+  const method = e.target.value;
+  const info = document.getElementById('payment_info');
+  
+  const paymentInfo = {
+    'cash': 'Pay cash on delivery. Your order will be confirmed and shipped.',
+    'card': 'Enter your card details. Payment will be processed immediately.',
+    'bank_deposit': 'Transfer funds to our bank account. Provide proof for verification.'
+  };
+  
+  info.textContent = paymentInfo[method] || 'Select a payment method to see details';
+});
+
+// Form submission
+document.getElementById('checkout_form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const customer_name = document.getElementById('customer_name').value;
+  const customer_email = document.getElementById('customer_email').value;
+  const payment_method = document.getElementById('payment_method').value;
+  
+  if (!payment_method) {
+    alert('Please select a payment method');
+    return;
+  }
+  
+  if (cart.length === 0) {
+    alert('Your cart is empty');
+    return;
+  }
+  
+  // Prepare items for API
+  const items = cart.map(item => ({
+    product_id: item.id,
+    quantity: item.quantity
+  }));
+  
+  const payload = {
+    customer_name,
+    customer_email,
+    payment_method,
+    items
+  };
+  
+  try {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                      document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+    
+    const res = await fetch('/api/online-orders/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken || ''
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const data = await res.json();
+    const messageDiv = document.getElementById('message');
+    
+    if (!res.ok) {
+      messageDiv.style.display = 'block';
+      messageDiv.style.background = '#f8d7da';
+      messageDiv.style.color = '#721c24';
+      messageDiv.style.border = '1px solid #f5c6cb';
+      messageDiv.textContent = data.detail || 'Error placing order';
+      return;
+    }
+    
+    messageDiv.style.display = 'block';
+    messageDiv.style.background = '#d4edda';
+    messageDiv.style.color = '#155724';
+    messageDiv.style.border = '1px solid #c3e6cb';
+    messageDiv.innerHTML = `
+      <strong>✓ Order Placed Successfully!</strong><br/>
+      Order Number: <strong>${data.order_number}</strong><br/>
+      Total: <strong>Rs. ${data.total_amount}</strong><br/>
+      <p style="margin-top: 10px; font-size: 14px;">Check your email for order confirmation.</p>
+    `;
+    
+    // Clear cart
+    localStorage.removeItem('shopping_cart');
+    
+    // Disable form
+    document.getElementById('checkout_form').style.opacity = '0.5';
+    document.getElementById('checkout_form').style.pointerEvents = 'none';
+    
+  } catch (err) {
+    const messageDiv = document.getElementById('message');
+    messageDiv.style.display = 'block';
+    messageDiv.style.background = '#f8d7da';
+    messageDiv.style.color = '#721c24';
+    messageDiv.textContent = 'Error: ' + err.message;
+  }
+});
+
+renderOrderSummary();
+</script>
+
+{% endblock %}

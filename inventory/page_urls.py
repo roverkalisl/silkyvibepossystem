@@ -8,6 +8,8 @@ from .views import (
     ProductListPageView,
     SpecialOffersPageView,
     POSCheckoutPageView,
+    CartPageView,
+    CheckoutPageView,
 )
 
 urlpatterns = [
@@ -17,6 +19,8 @@ urlpatterns = [
     path("products/<int:pk>/", ProductDetailPageView.as_view(), name="product-detail-page"),
     path("special-offers/", SpecialOffersPageView.as_view(), name="special-offers-page"),
     path("pos/checkout/", POSCheckoutPageView.as_view(), name="pos-checkout-page"),
+    path("cart/", CartPageView.as_view(), name="cart-page"),
+    path("checkout/", CheckoutPageView.as_view(), name="checkout-page"),
     path("categories/", CategoryListPageView.as_view(), name="category-list-page"),
     path("categories/add/", CategoryCreatePageView.as_view(), name="category-add-page"),
 ]

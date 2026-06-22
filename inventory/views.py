@@ -232,12 +232,21 @@ class POSOrderCreateView(APIView):
         # create order record
         order = None
         try:
+            # Set payment_status based on payment method
+            if payment_method in [Order.PAYMENT_COD, Order.PAYMENT_BANK_DEPOSIT]:
+                payment_status = Order.PAYMENT_STATUS_PENDING
+                order_status = Order.STATUS_PENDING
+            else:
+                payment_status = Order.PAYMENT_STATUS_VERIFIED
+                order_status = Order.STATUS_PAID
+
             order = Order.objects.create(
                 order_number=order_number,
                 customer_name=data.get("customer_name", ""),
                 customer_email=data.get("customer_email", ""),
-                status=Order.STATUS_PAID if payment_method else Order.STATUS_PENDING,
+                status=order_status,
                 payment_method=payment_method,
+                payment_status=payment_status,
             )
 
             total = 0
@@ -266,3 +275,80 @@ class POSOrderCreateView(APIView):
 
 class POSCheckoutPageView(TemplateView):
     template_name = "pos_checkout.html"
+
+
+class CartPageView(TemplateView):
+    template_name = "shopping_cart.html"
+
+
+class CheckoutPageView(TemplateView):
+    template_name = "checkout.html"
+
+
+class OnlineOrderCreateView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @transaction.atomic
+    def post(self, request):
+        data = request.data
+        customer_name = data.get("customer_name", "")
+        customer_email = data.get("customer_email", "")
+        payment_method = data.get("payment_method", "")
+        items = data.get("items", [])
+
+        if not items:
+            return Response({"detail": "Order must include at least one item."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Collect product IDs and quantities
+        product_ids = [item.get("product_id") for item in items]
+        if None in product_ids:
+            return Response({"detail": "Each item must include a product_id."}, status=status.HTTP_400_BAD_REQUEST)
+
+        products = Product.objects.select_for_update().filter(id__in=product_ids)
+        products_by_id = {p.id: p for p in products}
+
+        # Generate order number
+        order_number = f"ORD-{timezone.now().strftime('%Y%m%d%H%M%S')}-{secrets.token_hex(3)}"
+
+        # Create order
+        order = None
+        try:
+            # Set payment_status based on payment method
+            if payment_method in [Order.PAYMENT_COD, Order.PAYMENT_BANK_DEPOSIT]:
+                payment_status = Order.PAYMENT_STATUS_PENDING
+                order_status = Order.STATUS_PENDING
+            else:
+                payment_status = Order.PAYMENT_STATUS_VERIFIED
+                order_status = Order.STATUS_PAID
+
+            order = Order.objects.create(
+                order_number=order_number,
+                customer_name=customer_name,
+                customer_email=customer_email,
+                status=order_status,
+                payment_method=payment_method,
+                payment_status=payment_status,
+            )
+
+            total = 0
+            for item in items:
+                product_id = item.get("product_id")
+                quantity = int(item.get("quantity", 0))
+                product = products_by_id.get(product_id)
+                if not product:
+                    raise ValidationError(f"Product with id {product_id} not found.")
+                if product.stock_quantity < quantity:
+                    raise ValidationError(f"Insufficient stock for {product.name}.")
+                product.decrease_stock(quantity)
+                unit_price = product.final_price
+                OrderItem.objects.create(order=order, product=product, quantity=quantity, unit_price=unit_price)
+                total += unit_price * quantity
+
+            order.total_amount = total
+            order.save(update_fields=["total_amount"])
+        except Exception as exc:
+            if order is not None:
+                order.delete()
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"order_number": order.order_number, "total_amount": order.total_amount, "status": "success"})
