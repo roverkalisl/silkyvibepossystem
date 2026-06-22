@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Products - POS Inventory{% endblock %}
+
+{% block content %}
+    <h1>Products</h1>
+    <div class="filters">
+        <a href="?on_sale=true">Sale Items</a>
+        <a href="?min_price=0&max_price=5000">Under Rs. 5,000</a>
+        <a href="?min_price=5000&max_price=10000">Rs. 5,000 - 10,000</a>
+    </div>
+    <div class="product-grid">
+        {% for product in products %}
+            <article class="product-card">
+                {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                {% endif %}
+                <h3><a href="/pages/products/{{ product.pk }}/">{{ product.name }}</a></h3>
+                <p class="small-meta">SKU: {{ product.sku }}</p>
+                <p class="price">
+                    Rs. {{ product.final_price }}
+                    {% if product.sale_percentage %}
+                        <span class="original-price">Rs. {{ product.price }}</span>
+                    {% endif %}
+                </p>
+                {% if product.sale_percentage %}
+                    <span class="badge">{{ product.sale_percentage }}% OFF</span>
+                {% endif %}
+                <p class="small-meta">Stock: {{ product.stock_quantity }}</p>
+            </article>
+        {% empty %}
+            <p>No products found.</p>
+        {% endfor %}
+    </div>
+    {% if is_paginated %}
+        <div class="filters">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">Next</a>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Special Offers - POS Inventory{% endblock %}
+
+{% block content %}
+    <h1>Special Offers</h1>
+    <p>Products currently on sale.</p>
+    <div class="product-grid">
+        {% for product in products %}
+            <article class="product-card">
+                {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                {% endif %}
+                <h3><a href="/pages/products/{{ product.pk }}/">{{ product.name }}</a></h3>
+                <p class="price">Rs. {{ product.final_price }}
+                    <span class="original-price">Rs. {{ product.price }}</span>
+                </p>
+                <span class="badge">{{ product.sale_percentage }}% OFF</span>
+                <p class="small-meta">Stock: {{ product.stock_quantity }}</p>
+            </article>
+        {% empty %}
+            <p>No special offers are active at the moment.</p>
+        {% endfor %}
+    </div>
+    {% if is_paginated %}
+        <div class="filters">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">Next</a>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} - POS Inventory{% endblock %}
+
+{% block content %}
+    <div class="details">
+        <div>
+            {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+            {% endif %}
+            <h1>{{ product.name }}</h1>
+            <p>{{ product.description }}</p>
+            <p class="small-meta">SKU: {{ product.sku }} | Category: {{ product.category.name }}</p>
+            <p class="small-meta">Stock available: {{ product.stock_quantity }}</p>
+        </div>
+        <aside class="buy-box">
+            <h2>Pricing</h2>
+            <p class="price">Rs. {{ product.final_price }}
+                {% if product.sale_percentage %}
+                    <span class="original-price">Rs. {{ product.price }}</span>
+                {% endif %}
+            </p>
+            {% if product.sale_percentage %}
+                <p><span class="badge">{{ product.sale_percentage }}% OFF</span></p>
+            {% endif %}
+            <p class="small-meta">Sale active: {{ product.sale_start_date|date:"M d, Y" }} through {{ product.sale_end_date|date:"M d, Y" }}</p>
+            <p class="small-meta">Available stock: {{ product.stock_quantity }}</p>
+        </aside>
+    </div>
+{% endblock %}

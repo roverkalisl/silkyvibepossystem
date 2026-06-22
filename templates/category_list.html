@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Categories - POS Inventory{% endblock %}
+
+{% block content %}
+    <h1>Product Categories</h1>
+    <a href="/pages/categories/add/">Add Category</a>
+    <div class="product-grid">
+        {% for category in categories %}
+            <article class="product-card">
+                <h3>{{ category.name }}</h3>
+                <p class="small-meta">Slug: {{ category.slug }}</p>
+            </article>
+        {% empty %}
+            <p>No categories yet.</p>
+        {% endfor %}
+    </div>
+{% endblock %}

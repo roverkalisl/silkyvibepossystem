@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: possystem
+    env: python
+    plan: starter
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "gunicorn possystem.wsgi --log-file -"
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        value: "change-me-in-render"
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: "*"
+      - key: DATABASE_URL
+        value: "sqlite:///db.sqlite3"
