@@ -7,6 +7,7 @@ from .views import (
     ProductDetailPageView,
     ProductListPageView,
     SpecialOffersPageView,
+    POSCheckoutPageView,
 )
 
 urlpatterns = [
@@ -15,6 +16,7 @@ urlpatterns = [
     path("products/add/", ProductCreatePageView.as_view(), name="product-add-page"),
     path("products/<int:pk>/", ProductDetailPageView.as_view(), name="product-detail-page"),
     path("special-offers/", SpecialOffersPageView.as_view(), name="special-offers-page"),
+    path("pos/checkout/", POSCheckoutPageView.as_view(), name="pos-checkout-page"),
     path("categories/", CategoryListPageView.as_view(), name="category-list-page"),
     path("categories/add/", CategoryCreatePageView.as_view(), name="category-add-page"),
 ]

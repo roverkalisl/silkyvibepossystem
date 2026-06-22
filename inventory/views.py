@@ -8,10 +8,12 @@ from django.views.generic.edit import FormView
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+import secrets
 
 from .forms import CategoryForm, ProductForm
-from .models import Category, InventoryLog, Product
+from .models import Category, InventoryLog, Product, Order, OrderItem
 from .serializers import OrderSerializer, ProductSerializer
+from rest_framework.exceptions import ValidationError
 
 
 class HomePageView(TemplateView):
@@ -193,3 +195,74 @@ class StockUpdateView(APIView):
         InventoryLog.objects.create(product=product, change_amount=quantity, note=note, user=request.user if request.user.is_authenticated else None)
 
         return Response({"sku": product.sku, "stock_quantity": product.stock_quantity})
+
+
+class ProductBySKUView(generics.RetrieveAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [permissions.AllowAny]
+    lookup_field = "sku"
+
+
+class POSOrderCreateView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @transaction.atomic
+    def post(self, request):
+        data = request.data
+        cashier_name = data.get("cashier_name", "")
+        register_id = data.get("register_id", "")
+        payment_method = data.get("payment_method", "")
+        items = data.get("items", [])
+
+        if not items:
+            return Response({"detail": "Order must include at least one item."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Collect SKUs and quantities
+        skus = [item.get("sku") for item in items]
+        if None in skus:
+            return Response({"detail": "Each item must include a sku."}, status=status.HTTP_400_BAD_REQUEST)
+
+        products = Product.objects.select_for_update().filter(sku__in=skus)
+        products_by_sku = {p.sku: p for p in products}
+
+        # generate a unique POS order number
+        order_number = f"POS-{timezone.now().strftime('%Y%m%d%H%M%S')}-{secrets.token_hex(3)}"
+
+        # create order record
+        order = None
+        try:
+            order = Order.objects.create(
+                order_number=order_number,
+                customer_name=data.get("customer_name", ""),
+                customer_email=data.get("customer_email", ""),
+                status=Order.STATUS_PAID if payment_method else Order.STATUS_PENDING,
+                payment_method=payment_method,
+            )
+
+            total = 0
+            for item in items:
+                sku = item.get("sku")
+                quantity = int(item.get("quantity", 0))
+                product = products_by_sku.get(sku)
+                if not product:
+                    raise ValidationError(f"Product with sku {sku} not found.")
+                if product.stock_quantity < quantity:
+                    raise ValidationError(f"Insufficient stock for {product.name}.")
+                product.decrease_stock(quantity)
+                unit_price = product.final_price
+                OrderItem.objects.create(order=order, product=product, quantity=quantity, unit_price=unit_price)
+                total += unit_price * quantity
+
+            order.total_amount = total
+            order.save(update_fields=["total_amount"])
+        except Exception as exc:
+            if order is not None:
+                order.delete()
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"order_number": order.order_number, "total_amount": order.total_amount})
+
+
+class POSCheckoutPageView(TemplateView):
+    template_name = "pos_checkout.html"

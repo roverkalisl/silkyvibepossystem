@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<h1>POS Checkout</h1>
+<div>
+  <label>Cashier name: <input id="cashier_name" type="text" /></label>
+  <label>Register ID: <input id="register_id" type="text" /></label>
+  <label>Payment method:
+    <select id="payment_method">
+      <option value="">--</option>
+      <option value="cash">Cash</option>
+      <option value="card">Card</option>
+    </select>
+  </label>
+</div>
+<hr />
+<div>
+  <label>SKU: <input id="sku_input" type="text" /></label>
+  <label>Quantity: <input id="qty_input" type="number" value="1" min="1" /></label>
+  <button id="add_btn">Add to cart</button>
+</div>
+
+<h3>Cart</h3>
+<table id="cart_table" border="1">
+  <thead><tr><th>SKU</th><th>Name</th><th>Qty</th><th>Unit</th><th>Subtotal</th><th></th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<div>
+  <strong>Total: </strong><span id="total_amount">0.00</span>
+</div>
+
+<button id="submit_order">Submit Order</button>
+
+<div id="message"></div>
+
+<script>
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+const cart = [];
+
+async function fetchProductBySKU(sku) {
+  if (!sku) return null;
+  const res = await fetch(`/api/products/sku/${encodeURIComponent(sku)}/`);
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+function renderCart() {
+  const tbody = document.querySelector('#cart_table tbody');
+  tbody.innerHTML = '';
+  let total = 0;
+  cart.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${item.sku}</td><td>${item.name}</td><td>${item.quantity}</td><td>${parseFloat(item.unit_price).toFixed(2)}</td><td>${(item.quantity * parseFloat(item.unit_price)).toFixed(2)}</td><td><button data-idx="${idx}" class="remove">Remove</button></td>`;
+    tbody.appendChild(tr);
+    total += item.quantity * parseFloat(item.unit_price);
+  });
+  document.getElementById('total_amount').textContent = total.toFixed(2);
+}
+
+document.getElementById('add_btn').addEventListener('click', async () => {
+  const sku = document.getElementById('sku_input').value.trim();
+  const qty = parseInt(document.getElementById('qty_input').value, 10) || 1;
+  if (!sku) return alert('Enter SKU');
+  const p = await fetchProductBySKU(sku);
+  if (!p) return alert('Product not found');
+  cart.push({ sku: p.sku, name: p.name, quantity: qty, unit_price: p.final_price });
+  renderCart();
+});
+
+document.querySelector('#cart_table').addEventListener('click', (e) => {
+  if (e.target.classList.contains('remove')) {
+    const idx = parseInt(e.target.dataset.idx, 10);
+    cart.splice(idx, 1);
+    renderCart();
+  }
+});
+
+document.getElementById('submit_order').addEventListener('click', async () => {
+  if (cart.length === 0) return alert('Cart is empty');
+  const cashier_name = document.getElementById('cashier_name').value;
+  const register_id = document.getElementById('register_id').value;
+  const payment_method = document.getElementById('payment_method').value;
+  const payload = {
+    cashier_name,
+    register_id,
+    payment_method,
+    items: cart.map(i => ({ sku: i.sku, quantity: i.quantity })),
+  };
+  const csrftoken = getCookie('csrftoken');
+  const res = await fetch('/api/pos/orders/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrftoken,
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    document.getElementById('message').textContent = data.detail || 'Error';
+    return;
+  }
+  document.getElementById('message').textContent = `Order created: ${data.order_number} — Total ${data.total_amount}`;
+  cart.length = 0;
+  renderCart();
+});
+</script>
+
+{% endblock %}
