@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Login - Silkyvibe{% endblock %}
+
+{% block content %}
+<section class="hero-panel hero-gradient-secondary">
+  <div class="form-panel">
+    <h1>Customer Sign In</h1>
+    <p>Sign in to view past orders, track deliveries, and manage addresses.</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert-box">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div>
+        {{ form.username.label_tag }}
+        {{ form.username }}
+      </div>
+      <div>
+        {{ form.password.label_tag }}
+        {{ form.password }}
+      </div>
+      <button type="submit" class="button-secondary">Sign in</button>
+    </form>
+    <p class="small-meta">Don't have an account? <a href="/pages/" class="note-link">Browse products</a></p>
+  </div>
+</section>
+{% endblock %}

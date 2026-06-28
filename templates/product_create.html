@@ -1,14 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Add Product - POS Inventory{% endblock %}
+{% block title %}Add Product - Silkyvibe{% endblock %}
 
 {% block content %}
-    <h1>Add New Product</h1>
-    <form method="post" enctype="multipart/form-data">
+    <section class="page-hero hero-soft">
+        <div>
+            <p class="eyebrow">Inventory</p>
+            <h1>Add a new product</h1>
+            <p>Capture the essentials so your stock and storefront stay in sync.</p>
+        </div>
+    </section>
+    <form method="post" enctype="multipart/form-data" class="form-card">
         {% csrf_token %}
         <div class="product-card">
             {{ form.as_p }}
-            <button type="submit">Save Product</button>
+            <button class="btn btn-primary" type="submit">Save Product</button>
         </div>
     </form>
 {% endblock %}

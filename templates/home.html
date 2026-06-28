@@ -1,25 +1,131 @@
 {% extends "base.html" %}
 
-{% block title %}Home - POS Inventory{% endblock %}
+{% block title %}Home - Silkyvibe{% endblock %}
 
 {% block content %}
-    <section>
-        <h1>Welcome to the POS Inventory System</h1>
-        <p>Centralized inventory, sale pricing, stock updates, and product pages for retail and online channels.</p>
-        <div class="filters">
-            <a href="/">Home</a>
-            <a href="/pages/">Pages Home</a>
-            <a href="/pages/products/">Browse Products</a>
-            <a href="/pages/products/add/">Add Product</a>
-            <a href="/pages/categories/">Categories</a>
-            <a href="/pages/categories/add/">Add Category</a>
-            <a href="/pages/special-offers/">Special Offers</a>
-            <a href="/admin/">Admin Dashboard</a>
+    <section class="page-hero hero-surface">
+        <div>
+            <p class="eyebrow">Premium Omni-Channel Retail</p>
+            <h1>Run your physical store and online business from one elegant system.</h1>
+            <p>Silkyvibe brings together POS sales, online orders, inventory, promotions, and customer service in a single centralized experience.</p>
+            <div class="hero-actions">
+                <a class="btn btn-primary" href="{% url 'product-list-page' %}">Shop Now</a>
+                <a class="btn btn-secondary" href="{% url 'admin-login-page' %}">Staff Login</a>
+            </div>
+        </div>
+        <div class="hero-stats">
+            <div class="stat-card"><strong>{{ special_offers_count }}</strong><span>Active Offers</span></div>
+            <div class="stat-card"><strong>{{ featured_products|length }}</strong><span>Featured Products</span></div>
+            <div class="stat-card"><strong>{{ categories|length }}</strong><span>Product Categories</span></div>
         </div>
     </section>
 
-    <section>
-        <h2>Featured Products</h2>
+    <section class="hero-slider-section section-card">
+        <div class="hero-slider" id="heroSlider">
+            <article class="hero-slide active">
+                <div>
+                    <p class="eyebrow">New season launch</p>
+                    <h2>Elevate every sale with a premium retail experience.</h2>
+                    <p>Bring your storefront, POS, and back-office operations into one beautifully managed flow.</p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="{% url 'product-list-page' %}">Explore Collection</a>
+                        <a class="btn btn-secondary" href="{% url 'special-offers-page' %}">View Offers</a>
+                    </div>
+                </div>
+            </article>
+            <article class="hero-slide">
+                <div>
+                    <p class="eyebrow">Trusted by growing teams</p>
+                    <h2>Keep stock accurate while delighting customers online and in-store.</h2>
+                    <p>Manage promotions, inventory, and fulfillment without losing speed or control.</p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="{% url 'dashboard-page' %}">Open Dashboard</a>
+                        <a class="btn btn-secondary" href="{% url 'cart-page' %}">Go to Cart</a>
+                    </div>
+                </div>
+            </article>
+            <article class="hero-slide">
+                <div>
+                    <p class="eyebrow">Built for modern retail</p>
+                    <h2>Launch faster with polished tools for staff, customers, and owners.</h2>
+                    <p>From checkout to reporting, every interaction feels smoother and more premium.</p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="{% url 'pos-checkout-page' %}">Try POS</a>
+                        <a class="btn btn-secondary" href="{% url 'admin-login-page' %}">Staff Login</a>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div class="slider-controls" aria-label="Banner slider controls">
+            <button class="slider-btn" type="button" data-direction="prev" aria-label="Previous slide">&#10094;</button>
+            <div class="slider-dots" id="sliderDots"></div>
+            <button class="slider-btn" type="button" data-direction="next" aria-label="Next slide">&#10095;</button>
+        </div>
+    </section>
+
+    <section class="trust-strip">
+        <div class="trust-badges">
+            <span>✓ Secure checkout</span>
+            <span>✓ Live inventory</span>
+            <span>✓ Fast fulfillment</span>
+            <span>✓ Premium support</span>
+        </div>
+    </section>
+
+    <section class="feature-strip">
+        <article class="feature-card">
+            <h3>Unified Inventory</h3>
+            <p>Automatic stock updates across POS and online orders.</p>
+        </article>
+        <article class="feature-card">
+            <h3>Smart Reports</h3>
+            <p>Track revenue, expenses, and sales performance in real time.</p>
+        </article>
+        <article class="feature-card">
+            <h3>Premium Experience</h3>
+            <p>Modern storefront, filters, cart flow, and order visibility.</p>
+        </article>
+    </section>
+
+    <section class="content-section section-card story-strip">
+        <div>
+            <p class="eyebrow">Why Silkyvibe</p>
+            <h2>Built for modern retail teams that want speed, control, and elegance.</h2>
+        </div>
+        <div class="story-grid">
+            <div class="story-card">
+                <strong>Fast checkout</strong>
+                <p>Keep physical and online sales flowing with streamlined ordering.</p>
+            </div>
+            <div class="story-card">
+                <strong>Live inventory</strong>
+                <p>Stock updates instantly so customers only see what is available.</p>
+            </div>
+            <div class="story-card">
+                <strong>Business insight</strong>
+                <p>Track performance, promotions, and profit in a single dashboard.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="content-section section-card">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Featured Products</p>
+                <h2>Fresh arrivals and best-sellers</h2>
+            </div>
+            <a href="{% url 'product-list-page' %}">View All</a>
+        </div>
+        <div class="testimonial-row">
+            <article class="testimonial-card">
+                <p>“Silkyvibe gave our team a calm, modern way to manage both storefront and online sales.”</p>
+                <strong>— Amina, Retail Lead</strong>
+            </article>
+            <article class="testimonial-card">
+                <p>“Customers love the polished experience, and we love how quickly stock updates flow through.”</p>
+                <strong>— Daniel, Operations Manager</strong>
+            </article>
+        </div>
         <div class="product-grid">
             {% for product in featured_products %}
                 <article class="product-card">
@@ -32,13 +138,103 @@
                         <span class="badge">SALE</span>
                     {% endif %}
                     <p class="small-meta">Stock: {{ product.stock_quantity }}</p>
+                    <a class="link-btn" href="/pages/products/{{ product.pk }}/">View Details</a>
                 </article>
             {% endfor %}
         </div>
     </section>
 
-    <section>
-        <h2>Special Offers</h2>
-        <p>Currently active promotions: <strong class="highlight">{{ special_offers_count }}</strong></p>
+    <section class="content-section section-card">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Categories</p>
+                <h2>Browse by collection</h2>
+            </div>
+        </div>
+        <div class="category-list">
+            {% for category in categories %}
+                <a class="category-pill" href="/pages/products/?category={{ category.slug }}">{{ category.name }}</a>
+            {% empty %}
+                <p class="small-meta">Categories will appear here as soon as they are added.</p>
+            {% endfor %}
+        </div>
     </section>
+
+    <section class="content-section promo-panel">
+        <div>
+            <p class="eyebrow">Special Offers</p>
+            <h2>Launch promotions and drive momentum</h2>
+            <p>Use scheduled discounts and curated offers to keep your store exciting throughout the week.</p>
+        </div>
+        <div class="promo-list">
+            {% for product in sale_products %}
+                <div class="promo-item">
+                    <strong>{{ product.name }}</strong>
+                    <span>Now Rs. {{ product.final_price }}</span>
+                </div>
+            {% empty %}
+                <p class="small-meta">No active promotions right now.</p>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const slider = document.getElementById('heroSlider');
+    if (!slider) {
+        return;
+    }
+
+    const slides = Array.from(slider.querySelectorAll('.hero-slide'));
+    const dotsContainer = document.getElementById('sliderDots');
+    const buttons = document.querySelectorAll('.slider-btn');
+    let activeIndex = 0;
+    let timer = null;
+
+    function renderDots() {
+        if (!dotsContainer) {
+            return;
+        }
+        dotsContainer.innerHTML = '';
+        slides.forEach(function (_, index) {
+            const dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = 'slider-dot' + (index === activeIndex ? ' active' : '');
+            dot.setAttribute('aria-label', 'Go to slide ' + (index + 1));
+            dot.addEventListener('click', function () {
+                showSlide(index);
+            });
+            dotsContainer.appendChild(dot);
+        });
+    }
+
+    function showSlide(index) {
+        activeIndex = (index + slides.length) % slides.length;
+        slides.forEach(function (slide, slideIndex) {
+            slide.classList.toggle('active', slideIndex === activeIndex);
+        });
+        renderDots();
+        resetTimer();
+    }
+
+    function resetTimer() {
+        window.clearInterval(timer);
+        timer = window.setInterval(function () {
+            showSlide(activeIndex + 1);
+        }, 6000);
+    }
+
+    buttons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            const direction = button.getAttribute('data-direction') === 'next' ? 1 : -1;
+            showSlide(activeIndex + direction);
+        });
+    });
+
+    renderDots();
+    resetTimer();
+})();
+</script>
 {% endblock %}

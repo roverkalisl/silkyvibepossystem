@@ -1,10 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Special Offers - POS Inventory{% endblock %}
+{% block title %}Special Offers - Silkyvibe{% endblock %}
 
 {% block content %}
-    <h1>Special Offers</h1>
-    <p>Products currently on sale.</p>
+    <section class="page-hero hero-soft">
+        <div>
+            <p class="eyebrow">Promotions</p>
+            <h1>Special offers that keep your store moving.</h1>
+            <p>Spot campaigns, flash deals, and discounted products at a glance.</p>
+        </div>
+        <div class="hero-card">
+            <p class="small-meta">Current focus</p>
+            <p class="status-pill">Live promotions</p>
+        </div>
+    </section>
+
     <div class="product-grid">
         {% for product in products %}
             <article class="product-card">
@@ -17,9 +27,15 @@
                 </p>
                 <span class="badge">{{ product.sale_percentage }}% OFF</span>
                 <p class="small-meta">Stock: {{ product.stock_quantity }}</p>
+                <button class="add-to-cart-btn"
+                    data-product-id="{{ product.id }}"
+                    data-sku="{{ product.sku }}"
+                    data-name="{{ product.name }}"
+                    data-price="{{ product.final_price }}"
+                >Add to Cart</button>
             </article>
         {% empty %}
-            <p>No special offers are active at the moment.</p>
+            <p class="empty-state">No special offers are active at the moment.</p>
         {% endfor %}
     </div>
     {% if is_paginated %}

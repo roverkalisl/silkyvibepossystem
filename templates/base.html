@@ -1,47 +1,126 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}POS Inventory{% endblock %}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; color: #333; }
-        header, footer { background: #222; color: #fff; padding: 1rem 2rem; }
-        header a, footer a { color: #fff; text-decoration: none; margin-right: 1rem; }
-        .page-content { max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem; }
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
-        .product-card { background: #fff; padding: 1rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,.05); }
-        .product-card img { max-width: 100%; border-radius: 8px; }
-        .product-card h3 { margin: .5rem 0; font-size: 1.1rem; }
-        .price { font-weight: 700; }
-        .sale-price { color: #d32f2f; }
-        .original-price { text-decoration: line-through; color: #999; margin-left: .5rem; }
-        .badge { display: inline-block; background: #d32f2f; color: #fff; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
-        .filters { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
-        .filters a { padding: .5rem 1rem; background: #fff; color: #333; border-radius: 8px; text-decoration: none; border: 1px solid #ddd; }
-        .details { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.5rem; }
-        .details img { width: 100%; border-radius: 12px; }
-        .buy-box { background: #fff; padding: 1rem; border-radius: 12px; border: 1px solid #ddd; }
-        .small-meta { color: #666; font-size: .9rem; margin-bottom: .75rem; }
-        .highlight { color: #1976d2; font-weight: 700; }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
-<header>
-    <a href="/">Home</a>
-    <a href="/pages/">Pages Home</a>
-    <a href="/admin/">Admin</a>
-    <a href="/pages/products/">Products</a>
-    <a href="/pages/products/add/">Add Product</a>
-    <a href="/pages/categories/">Categories</a>
-    <a href="/pages/categories/add/">Add Category</a>
-    <a href="/pages/special-offers/">Special Offers</a>
+<header class="site-header">
+    <div class="brand-wrap">
+        <a class="brand" href="{% url 'home-page' %}">
+            <span class="brand-mark">S</span>
+            <span>
+                <strong>Silkyvibe</strong>
+                <small>Retail OS</small>
+            </span>
+        </a>
+    </div>
+    <nav class="nav-links" aria-label="Primary navigation">
+        <a class="nav-link" href="{% url 'home-page' %}">Home</a>
+        <a class="nav-link" href="{% url 'product-list-page' %}">Shop</a>
+        <a class="nav-link" href="{% url 'special-offers-page' %}">Offers</a>
+        <a class="nav-link" href="{% url 'cart-page' %}">Cart</a>
+        <a class="nav-link" href="{% url 'pos-checkout-page' %}">POS</a>
+        <a class="nav-link" href="{% url 'dashboard-page' %}">Dashboard</a>
+        <a class="nav-link" href="/admin/">Admin</a>
+    </nav>
+    <div class="nav-actions">
+        <a class="nav-pill" href="{% url 'cart-page' %}">Cart <span id="cart_badge" class="cart-badge">0</span></a>
+        <a class="nav-pill nav-pill-accent" href="{% url 'customer-login-page' %}">Sign In</a>
+    </div>
 </header>
 <main class="page-content">
     {% block content %}{% endblock %}
 </main>
-<footer>
-    <p>Integrated Retail POS &amp; Online Inventory System</p>
+<footer class="site-footer">
+    <p>Silkyvibe combines retail POS, online commerce, inventory, and business insights in one polished platform.</p>
 </footer>
+<script>
+(function(){
+    function loadCart() {
+        try {
+            return JSON.parse(localStorage.getItem('shopping_cart') || '[]');
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function saveCart(cart) {
+        localStorage.setItem('shopping_cart', JSON.stringify(cart));
+    }
+
+    function addToCart(item) {
+        const cart = loadCart();
+        const existing = cart.find(function(cartItem){ return cartItem.id === item.id; });
+        if (existing) {
+            existing.quantity = parseInt(existing.quantity || 0, 10) + parseInt(item.quantity || 1, 10);
+        } else {
+            cart.push(item);
+        }
+        saveCart(cart);
+        showToast(item.name + ' added to cart');
+    }
+
+    function showToast(message) {
+        let toast = document.getElementById('cart_toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'cart_toast';
+            toast.className = 'cart-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.classList.add('show');
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(function(){
+            toast.classList.remove('show');
+        }, 1800);
+    }
+
+    function updateCartBadge() {
+        const badge = document.getElementById('cart_badge');
+        if (!badge) {
+            return;
+        }
+        const cart = loadCart();
+        const qty = cart.reduce(function(total, item){ return total + (parseInt(item.quantity || 0, 10)); }, 0);
+        badge.textContent = qty;
+    }
+
+    document.addEventListener('click', function(event){
+        var button = event.target.closest('.add-to-cart-btn');
+        if (!button) {
+            return;
+        }
+        event.preventDefault();
+        var productId = parseInt(button.dataset.productId, 10);
+        var sku = button.dataset.sku || '';
+        var name = button.dataset.name || '';
+        var price = parseFloat(button.dataset.price) || 0;
+        var quantity = 1;
+        var qtyInput = document.getElementById('product_qty');
+        if (qtyInput) {
+            quantity = parseInt(qtyInput.value, 10) || 1;
+        }
+        if (quantity < 1) {
+            quantity = 1;
+        }
+        addToCart({
+            id: productId,
+            sku: sku,
+            name: name,
+            quantity: quantity,
+            price: price
+        });
+        updateCartBadge();
+    });
+
+    document.addEventListener('DOMContentLoaded', updateCartBadge);
+})();
+</script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

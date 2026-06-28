@@ -1,14 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Add Category - POS Inventory{% endblock %}
+{% block title %}Add Category - Silkyvibe{% endblock %}
 
 {% block content %}
-    <h1>Add Product Category</h1>
-    <form method="post">
+    <section class="page-hero hero-soft">
+        <div>
+            <p class="eyebrow">Catalog</p>
+            <h1>Add a product category</h1>
+            <p>Keep your storefront structured and easy to navigate.</p>
+        </div>
+    </section>
+    <form method="post" class="form-card">
         {% csrf_token %}
         <div class="product-card">
             {{ form.as_p }}
-            <button type="submit">Save Category</button>
+            <button class="btn btn-primary" type="submit">Save Category</button>
         </div>
     </form>
 {% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Silkyvibe{% endblock %}
+
+{% block content %}
+    <section class="dashboard-hero">
+        <div>
+            <p class="eyebrow">Retail Intelligence</p>
+            <h1>Modern dashboard for retail, online orders, and growth.</h1>
+            <p>Monitor sales, inventory, and customer activity from one polished control center.</p>
+        </div>
+        <div class="dashboard-hero-actions">
+            <a class="btn btn-primary" href="{% url 'pos-checkout-page' %}">Open POS</a>
+            <a class="btn btn-secondary" href="{% url 'product-list-page' %}">Manage Products</a>
+        </div>
+    </section>
+
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <h2>Today's Sales</h2>
+            <p>Rs. {{ today_sales_total }}</p>
+            <span>{{ today_sales_count }} completed orders</span>
+        </div>
+        <div class="dashboard-card">
+            <h2>Online Orders</h2>
+            <p>{{ online_orders_count }}</p>
+            <a href="{% url 'checkout-page' %}">View online checkout</a>
+        </div>
+        <div class="dashboard-card">
+            <h2>POS Orders</h2>
+            <p>{{ pos_orders_count }}</p>
+            <a href="{% url 'pos-checkout-page' %}">Open POS</a>
+        </div>
+        <div class="dashboard-card">
+            <h2>Pending Orders</h2>
+            <p>{{ pending_orders_count }}</p>
+            <a href="{% url 'checkout-page' %}">Review orders</a>
+        </div>
+        <div class="dashboard-card">
+            <h2>Payment Checks</h2>
+            <p>{{ payment_verification_count }}</p>
+            <a href="/admin/">Open admin review</a>
+        </div>
+        <div class="dashboard-card">
+            <h2>Low Stock</h2>
+            <p>{{ low_stock_count }}</p>
+            <a href="{% url 'product-list-page' %}">View inventory</a>
+        </div>
+        <div class="dashboard-card">
+            <h2>Customers</h2>
+            <p>{{ total_customers_count }}</p>
+            <a href="/admin/">Manage customers</a>
+        </div>
+        <div class="dashboard-card">
+            <h2>Monthly Revenue</h2>
+            <p>Rs. {{ monthly_revenue }}</p>
+            <span>Monthly expenses: Rs. {{ monthly_expenses }}</span>
+        </div>
+        <div class="dashboard-card dashboard-wide">
+            <h2>Net Profit</h2>
+            <p>Rs. {{ net_profit }}</p>
+            <span>Healthy balance for your current month.</span>
+        </div>
+    </div>
+
+    <div class="dashboard-grid dashboard-lower">
+        <section class="dashboard-card">
+            <h2>Best Selling Products</h2>
+            <ul class="list-stack">
+                {% for item in best_selling_products %}
+                    <li><strong>{{ item.product__name }}</strong> — {{ item.total_sold }} sold</li>
+                {% empty %}
+                    <li>No sales history yet.</li>
+                {% endfor %}
+            </ul>
+        </section>
+        <section class="dashboard-card">
+            <h2>Recent Orders</h2>
+            <ul class="list-stack">
+                {% for order in recent_orders %}
+                    <li><strong>{{ order.order_number }}</strong> — {{ order.status }} · Rs. {{ order.total_amount }}</li>
+                {% empty %}
+                    <li>No orders yet.</li>
+                {% endfor %}
+            </ul>
+        </section>
+        <section class="dashboard-card dashboard-wide">
+            <h2>Low Stock Alerts</h2>
+            <ul class="list-stack">
+                {% for product in recent_low_stock_products %}
+                    <li><strong>{{ product.name }}</strong> — {{ product.stock_quantity }} left</li>
+                {% empty %}
+                    <li>All products are comfortably stocked.</li>
+                {% endfor %}
+            </ul>
+        </section>
+    </div>
+{% endblock %}

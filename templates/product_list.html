@@ -1,9 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}Products - POS Inventory{% endblock %}
+{% block title %}Products - Silkyvibe{% endblock %}
 
 {% block content %}
-    <h1>Products</h1>
+    <section class="page-hero hero-soft">
+        <div>
+            <p class="eyebrow">Shop</p>
+            <h1>Discover products tailored for your customers.</h1>
+            <p>Filter by category, sale status, or price to quickly find what matters.</p>
+        </div>
+        <div class="hero-card">
+            <p class="small-meta">Quick links</p>
+            <a class="link-btn" href="{% url 'special-offers-page' %}">View Offers</a>
+            <a class="link-btn" href="{% url 'cart-page' %}">View Cart</a>
+        </div>
+    </section>
+
     <div class="filters">
         <a href="?on_sale=true">Sale Items</a>
         <a href="?min_price=0&max_price=5000">Under Rs. 5,000</a>
@@ -27,9 +39,15 @@
                     <span class="badge">{{ product.sale_percentage }}% OFF</span>
                 {% endif %}
                 <p class="small-meta">Stock: {{ product.stock_quantity }}</p>
+                <button class="add-to-cart-btn"
+                    data-product-id="{{ product.id }}"
+                    data-sku="{{ product.sku }}"
+                    data-name="{{ product.name }}"
+                    data-price="{{ product.final_price }}"
+                >Add to Cart</button>
             </article>
         {% empty %}
-            <p>No products found.</p>
+            <p class="empty-state">No products found.</p>
         {% endfor %}
     </div>
     {% if is_paginated %}

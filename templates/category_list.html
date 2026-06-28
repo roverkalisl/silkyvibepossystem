@@ -1,10 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Categories - POS Inventory{% endblock %}
+{% block title %}Categories - Silkyvibe{% endblock %}
 
 {% block content %}
-    <h1>Product Categories</h1>
-    <a href="/pages/categories/add/">Add Category</a>
+    <section class="page-hero hero-soft">
+        <div>
+            <p class="eyebrow">Catalog</p>
+            <h1>Organize your products by category.</h1>
+            <p>Create clear storefront sections and guide customers to the right products faster.</p>
+        </div>
+        <div class="hero-card">
+            <a class="btn btn-primary" href="{% url 'category-add-page' %}">Add Category</a>
+        </div>
+    </section>
     <div class="product-grid">
         {% for category in categories %}
             <article class="product-card">
@@ -12,7 +20,7 @@
                 <p class="small-meta">Slug: {{ category.slug }}</p>
             </article>
         {% empty %}
-            <p>No categories yet.</p>
+            <p class="empty-state">No categories yet.</p>
         {% endfor %}
     </div>
 {% endblock %}

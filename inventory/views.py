@@ -1,5 +1,7 @@
+from decimal import Decimal
+
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Sum, DecimalField
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -9,10 +11,37 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 import secrets
+from django.contrib.auth import login
+from django.contrib.auth.forms import AuthenticationForm
+from django.shortcuts import render, redirect
 
 from .forms import CategoryForm, ProductForm
-from .models import Category, InventoryLog, Product, Order, OrderItem
-from .serializers import OrderSerializer, ProductSerializer
+from .models import (
+    Category,
+    Coupon,
+    Customer,
+    DeliveryPartner,
+    Expense,
+    ExpenseCategory,
+    InventoryLog,
+    Product,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    Supplier,
+    Order,
+    OrderItem,
+)
+from .serializers import (
+    CouponSerializer,
+    CustomerSerializer,
+    DeliveryPartnerSerializer,
+    ExpenseCategorySerializer,
+    ExpenseSerializer,
+    OrderSerializer,
+    ProductSerializer,
+    PurchaseOrderSerializer,
+    SupplierSerializer,
+)
 from rest_framework.exceptions import ValidationError
 
 
@@ -21,14 +50,90 @@ class HomePageView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        now = timezone.now()
         context["featured_products"] = Product.objects.order_by("name")[:6]
+        context["categories"] = Category.objects.order_by("name")[:8]
         context["special_offers_count"] = Product.objects.filter(
             is_on_sale=True,
             discount_price__isnull=False,
-            sale_start_date__lte=timezone.now(),
-            sale_end_date__gte=timezone.now(),
+            sale_start_date__lte=now,
+            sale_end_date__gte=now,
         ).count()
+        context["sale_products"] = Product.objects.filter(
+            is_on_sale=True,
+            discount_price__isnull=False,
+            sale_start_date__lte=now,
+            sale_end_date__gte=now,
+        ).order_by("-updated_at")[:4]
         return context
+
+
+class DashboardPageView(TemplateView):
+    template_name = "dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        now = timezone.now()
+        today = now.date()
+        current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        current_year = now.year
+        current_month = now.month
+
+        today_orders = Order.objects.filter(created_at__date=today)
+        today_sales = today_orders.filter(status__in=[Order.STATUS_PAID, Order.STATUS_SHIPPED, Order.STATUS_DELIVERED])
+        monthly_revenue = Order.objects.filter(created_at__gte=current_month_start).aggregate(total=Sum("total_amount"))["total"] or Decimal("0")
+        monthly_expenses = Expense.objects.filter(expense_date__month=current_month, expense_date__year=current_year).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+        context["pos_orders_count"] = Order.objects.filter(order_number__startswith="POS-").count()
+        context["online_orders_count"] = Order.objects.exclude(order_number__startswith="POS-").count()
+        context["products_count"] = Product.objects.count()
+        context["low_stock_count"] = Product.objects.filter(stock_quantity__lte=F("min_stock_level")).count()
+        context["pending_orders_count"] = Order.objects.filter(status=Order.STATUS_PENDING).count()
+        context["payment_verification_count"] = Order.objects.filter(payment_status=Order.PAYMENT_STATUS_PENDING).count()
+        context["total_customers_count"] = Customer.objects.count()
+        context["today_sales_count"] = today_sales.count()
+        context["today_sales_total"] = today_sales.aggregate(total=Sum("total_amount"))["total"] or Decimal("0")
+        context["monthly_revenue"] = monthly_revenue
+        context["monthly_expenses"] = monthly_expenses
+        context["net_profit"] = monthly_revenue - monthly_expenses
+        context["special_offers_count"] = Product.objects.filter(
+            is_on_sale=True,
+            discount_price__isnull=False,
+            sale_start_date__lte=now,
+            sale_end_date__gte=now,
+        ).count()
+        context["best_selling_products"] = (
+            OrderItem.objects.values("product__name")
+            .annotate(total_sold=Sum("quantity"))
+            .order_by("-total_sold")[:5]
+        )
+        context["recent_orders"] = Order.objects.order_by("-created_at")[:6]
+        context["recent_low_stock_products"] = Product.objects.filter(stock_quantity__lte=F("min_stock_level")).order_by("stock_quantity")[:6]
+        return context
+
+
+class AdminLoginPageView(FormView):
+    template_name = "admin_login.html"
+    form_class = AuthenticationForm
+
+    def form_valid(self, form):
+        user = form.get_user()
+        if not user.is_staff:
+            form.add_error(None, "You must be an admin/staff user to sign in here.")
+            return self.form_invalid(form)
+        login(self.request, user)
+        return redirect("admin:index")
+
+
+class CustomerLoginPageView(FormView):
+    template_name = "customer_login.html"
+    form_class = AuthenticationForm
+
+    def form_valid(self, form):
+        user = form.get_user()
+        login(self.request, user)
+        next_url = self.request.GET.get("next") or "/"
+        return redirect(next_url)
 
 
 class ProductListPageView(ListView):
@@ -161,6 +266,139 @@ class OrderCreateView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
 
 
+class LowStockListView(generics.ListAPIView):
+    serializer_class = ProductSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_queryset(self):
+        return Product.objects.annotate(
+            available_stock=F("stock_quantity") - F("reserved_quantity")
+        ).filter(available_stock__lte=F("min_stock_level"))
+
+
+class SupplierListCreateView(generics.ListCreateAPIView):
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class SupplierDetailView(generics.RetrieveAPIView):
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class CustomerListView(generics.ListAPIView):
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class CustomerDetailView(generics.RetrieveAPIView):
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class DeliveryPartnerListCreateView(generics.ListCreateAPIView):
+    queryset = DeliveryPartner.objects.all()
+    serializer_class = DeliveryPartnerSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class CouponListCreateView(generics.ListCreateAPIView):
+    queryset = Coupon.objects.all()
+    serializer_class = CouponSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class ExpenseCategoryListCreateView(generics.ListCreateAPIView):
+    queryset = ExpenseCategory.objects.all()
+    serializer_class = ExpenseCategorySerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class ExpenseListCreateView(generics.ListCreateAPIView):
+    queryset = Expense.objects.all()
+    serializer_class = ExpenseSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class PurchaseOrderListCreateView(generics.ListCreateAPIView):
+    queryset = PurchaseOrder.objects.all()
+    serializer_class = PurchaseOrderSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class PurchaseOrderDetailView(generics.RetrieveAPIView):
+    queryset = PurchaseOrder.objects.all()
+    serializer_class = PurchaseOrderSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class PurchaseOrderReceiveView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    @transaction.atomic
+    def post(self, request, pk):
+        items = request.data.get("items", [])
+
+        try:
+            purchase_order = PurchaseOrder.objects.select_for_update().get(pk=pk)
+        except PurchaseOrder.DoesNotExist:
+            return Response({"detail": "Purchase order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        purchase_order.receive_stock(items)
+        return Response(
+            {
+                "order_number": purchase_order.order_number,
+                "status": purchase_order.status,
+                "total_cost": purchase_order.total_cost,
+            }
+        )
+
+
+class ReportSummaryView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        sales_total = Order.objects.filter(payment_status=Order.PAYMENT_STATUS_VERIFIED).aggregate(
+            total=Sum("total_amount")
+        )["total"] or Decimal("0")
+
+        cogs_total = OrderItem.objects.aggregate(
+            cogs=Sum(
+                F("quantity") * F("product__cost_price"),
+                output_field=DecimalField(max_digits=16, decimal_places=2),
+            )
+        )["cogs"] or Decimal("0")
+
+        expenses_total = Expense.objects.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        purchases_total = PurchaseOrder.objects.aggregate(total=Sum("total_cost"))["total"] or Decimal("0")
+
+        low_stock_count = Product.objects.annotate(
+            available_stock=F("stock_quantity") - F("reserved_quantity")
+        ).filter(available_stock__lte=F("min_stock_level")).count()
+
+        top_selling = (
+            OrderItem.objects.values("product__id", "product__name")
+            .annotate(quantity_sold=Sum("quantity"))
+            .order_by("-quantity_sold")[:5]
+        )
+
+        return Response(
+            {
+                "sales_total": sales_total,
+                "cogs_total": cogs_total,
+                "expenses_total": expenses_total,
+                "purchases_total": purchases_total,
+                "net_profit": sales_total - cogs_total - expenses_total,
+                "low_stock_count": low_stock_count,
+                "top_selling_products": list(top_selling),
+            }
+        )
+
+
 class InventoryListView(generics.ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -233,7 +471,7 @@ class POSOrderCreateView(APIView):
         order = None
         try:
             # Set payment_status based on payment method
-            if payment_method in [Order.PAYMENT_COD, Order.PAYMENT_BANK_DEPOSIT]:
+            if payment_method in [Order.PAYMENT_COD, Order.PAYMENT_BANK_DEPOSIT, Order.PAYMENT_CASH]:
                 payment_status = Order.PAYMENT_STATUS_PENDING
                 order_status = Order.STATUS_PENDING
             else:
@@ -314,7 +552,7 @@ class OnlineOrderCreateView(APIView):
         order = None
         try:
             # Set payment_status based on payment method
-            if payment_method in [Order.PAYMENT_COD, Order.PAYMENT_BANK_DEPOSIT]:
+            if payment_method in [Order.PAYMENT_COD, Order.PAYMENT_BANK_DEPOSIT, Order.PAYMENT_CASH]:
                 payment_status = Order.PAYMENT_STATUS_PENDING
                 order_status = Order.STATUS_PENDING
             else:
@@ -340,6 +578,7 @@ class OnlineOrderCreateView(APIView):
                 if product.stock_quantity < quantity:
                     raise ValidationError(f"Insufficient stock for {product.name}.")
                 product.decrease_stock(quantity)
+                product.refresh_from_db()
                 unit_price = product.final_price
                 OrderItem.objects.create(order=order, product=product, quantity=quantity, unit_price=unit_price)
                 total += unit_price * quantity
